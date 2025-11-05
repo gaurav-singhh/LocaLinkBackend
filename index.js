@@ -19,7 +19,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "https://loca-link-v1.vercel.app",
+    origin: ["http://localhost:5173", "https://loca-link-v1.vercel.app"],
     credentials: true,
     methods: ["POST", "GET"],
   },
