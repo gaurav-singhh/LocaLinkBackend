@@ -49,7 +49,7 @@ app.use("/api/item", itemRouter);
 app.use("/api/order", orderRouter);
 
 socketHandler(io);
-server.listen(port, '0.0.0.0', () => {
+server.listen(port, "0.0.0.0", () => {
   connectDb();
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${port}`);
 });
