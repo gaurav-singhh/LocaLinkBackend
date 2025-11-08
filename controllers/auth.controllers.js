@@ -69,7 +69,21 @@ export const sendVerificationOtp = async (req, res) => {
       verification.emailOtp = otp;
       verification.emailOtpExpires = expires;
       verification.emailVerified = false;
-      await sendVerificationOtpMail(email, otp);
+      
+      try {
+        await sendVerificationOtpMail(email, otp);
+        console.log("✅ Verification email sent successfully to:", email);
+      } catch (emailError) {
+        console.error("❌ Email sending failed:", emailError.message);
+        // Save the OTP anyway so user can verify later or contact support
+        await verification.save();
+        return res.status(200).json({
+          message: "Verification code generated but email delivery failed. Please contact support or try again.",
+          type,
+          verificationId: verification._id,
+          emailSent: false,
+        });
+      }
     }
 
     await verification.save();
@@ -78,11 +92,13 @@ export const sendVerificationOtp = async (req, res) => {
       message: `Verification code sent to your ${type}`,
       type,
       verificationId: verification._id,
+      emailSent: true,
     });
   } catch (error) {
+    console.error("❌ Error in sendVerificationOtp:", error);
     return res
       .status(500)
-      .json({ message: `Error sending verification: ${error}` });
+      .json({ message: `Error sending verification: ${error.message}` });
   }
 };
 
@@ -230,10 +246,21 @@ export const sendOtp = async (req, res) => {
     user.otpExpires = Date.now() + 5 * 60 * 1000;
     user.isOtpVerified = false;
     await user.save();
-    await sendOtpMail(email, otp);
-    return res.status(200).json({ message: "otp sent successfully" });
+    
+    try {
+      await sendOtpMail(email, otp);
+      console.log("✅ Password reset OTP sent to:", email);
+      return res.status(200).json({ message: "OTP sent successfully", emailSent: true });
+    } catch (emailError) {
+      console.error("❌ Failed to send password reset email:", emailError.message);
+      return res.status(200).json({ 
+        message: "OTP generated but email delivery failed. Please try again or contact support.",
+        emailSent: false 
+      });
+    }
   } catch (error) {
-    return res.status(500).json(`send otp error ${error}`);
+    console.error("❌ Error in sendOtp:", error);
+    return res.status(500).json({ message: `Send OTP error: ${error.message}` });
   }
 };
 
