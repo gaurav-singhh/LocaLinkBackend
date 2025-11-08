@@ -19,16 +19,17 @@ const server = http.createServer(app);
 
 // Handle allowed origins based on environment
 const getAllowedOrigins = () => {
-  const origins = process.env.CLIENT_ORIGINS?.split(',').map(origin => origin.trim()) || [];
-  
-  if (process.env.NODE_ENV === 'development') {
-    origins.push(process.env.DEVELOPMENT_CLIENT_URL || 'http://localhost:5173');
+  const origins =
+    process.env.CLIENT_ORIGINS?.split(",").map((origin) => origin.trim()) || [];
+
+  if (process.env.NODE_ENV === "development") {
+    origins.push(process.env.DEVELOPMENT_CLIENT_URL || "http://localhost:5173");
   }
-  
-  if (process.env.NODE_ENV === 'production') {
+
+  if (process.env.NODE_ENV === "production") {
     origins.push(process.env.PRODUCTION_CLIENT_URL);
   }
-  
+
   return [...new Set(origins)].filter(Boolean);
 };
 
@@ -39,12 +40,12 @@ const corsOptions = {
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error("Not allowed by CORS"));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 // Configure Socket.IO with CORS
@@ -54,7 +55,7 @@ const io = new Server(server, {
   connectTimeout: 60000,
 });
 
-app.set('io', io);
+app.set("io", io);
 
 const port = process.env.PORT || 5000;
 app.use(cors(corsOptions));
