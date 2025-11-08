@@ -17,11 +17,17 @@ import { socketHandler } from "./socket.js";
 const app = express();
 const server = http.createServer(app);
 
+// Allow multiple client origins via env (comma-separated)
+const clientOrigins = (process.env.CLIENT_ORIGINS || "http://localhost:5173")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "https://loca-link-v1.vercel.app"],
+    origin: clientOrigins,
     credentials: true,
-    methods: ["POST", "GET"],
+    methods: ["POST", "GET", "PUT", "PATCH", "DELETE", "OPTIONS"],
   },
 });
 
@@ -30,7 +36,7 @@ app.set("io", io);
 const port = process.env.PORT || 5000;
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: clientOrigins,
     credentials: true,
   })
 );

@@ -19,11 +19,15 @@ export const sendVerificationOtp = async (req, res) => {
     const emailRegex =
       /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     const mobileRegex = /^[0-9]{10}$/;
+    const e164Regex = /^\+\d{8,15}$/;
     if (type === "email" && !emailRegex.test(String(email).toLowerCase())) {
       return res.status(400).json({ message: "Invalid email format" });
     }
-    if (type === "mobile" && !mobileRegex.test(String(mobile))) {
-      return res.status(400).json({ message: "Invalid mobile number format" });
+    // Mobile verification is disabled
+    if (type === "mobile") {
+      return res
+        .status(400)
+        .json({ message: "Mobile verification is currently disabled" });
     }
 
     // Uniqueness check against existing users
@@ -32,13 +36,11 @@ export const sendVerificationOtp = async (req, res) => {
         type === "email" ? email : mobile,
     });
     if (exists) {
-      return res
-        .status(400)
-        .json({
-          message: `${
-            type === "email" ? "Email" : "Mobile number"
-          } already registered`,
-        });
+      return res.status(400).json({
+        message: `${
+          type === "email" ? "Email" : "Mobile number"
+        } already registered`,
+      });
     }
 
     // Find or create a verification record
@@ -68,12 +70,6 @@ export const sendVerificationOtp = async (req, res) => {
       verification.emailOtpExpires = expires;
       verification.emailVerified = false;
       await sendVerificationOtpMail(email, otp);
-    } else {
-      verification.mobileOtp = otp;
-      verification.mobileOtpExpires = expires;
-      verification.mobileVerified = false;
-      // Integrate SMS provider here; for now, log to server console
-      console.log(`Signup SMS OTP for ${mobile}: ${otp}`);
     }
 
     await verification.save();
@@ -110,17 +106,9 @@ export const verifySignupOtp = async (req, res) => {
       v.emailOtp = undefined;
       v.emailOtpExpires = undefined;
     } else {
-      if (
-        !v.mobileOtp ||
-        v.mobileOtp !== otp ||
-        !v.mobileOtpExpires ||
-        v.mobileOtpExpires < now
-      ) {
-        return res.status(400).json({ message: "Invalid or expired OTP" });
-      }
-      v.mobileVerified = true;
-      v.mobileOtp = undefined;
-      v.mobileOtpExpires = undefined;
+      return res
+        .status(400)
+        .json({ message: "Mobile verification is currently disabled" });
     }
     await v.save();
 
@@ -139,18 +127,18 @@ export const signUp = async (req, res) => {
     const { fullName, email, password, mobile, role, verificationId } =
       req.body;
 
-    // Load verification record and ensure both are verified
+    // Load verification record and ensure email is verified
     const v = await SignupVerification.findById(verificationId);
-    if (!v || !v.emailVerified || !v.mobileVerified) {
+    if (!v || !v.emailVerified) {
       return res.status(400).json({
-        message: "Email and mobile verification required",
+        message: "Email verification required",
         isEmailVerified: v?.emailVerified || false,
-        isMobileVerified: v?.mobileVerified || false,
+        isMobileVerified: false,
       });
     }
 
-    // Ensure submitted email/mobile match verified ones
-    if (v.email !== email || v.mobile !== mobile || v.fullName !== fullName) {
+    // Ensure submitted email and full name match verified ones
+    if (v.email !== email || v.fullName !== fullName) {
       return res
         .status(400)
         .json({ message: "Provided details do not match verified records" });
@@ -174,7 +162,7 @@ export const signUp = async (req, res) => {
       mobile,
       role,
       isEmailVerified: true,
-      isMobileVerified: true,
+      isMobileVerified: false,
     });
 
     // Clean up the verification record
